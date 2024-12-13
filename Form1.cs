@@ -35,6 +35,9 @@ namespace Chaos_Spear
 
         GOCPlayerKinematicParams kParams;
         GOCPlayerKinematicParams savedParams;
+        List<GOCPlayerKinematicParams> saveSlots = new List<GOCPlayerKinematicParams>();
+        int slotToSave = 0;
+        int slotToLoad = 0;
         private float[] savedPos = new float[3];
 
         float[] oldPos = { 0, 0, 0 };
@@ -109,7 +112,11 @@ namespace Chaos_Spear
 
         private void Form1_Load(object sender, EventArgs e)
         {
-
+            // Adds 10 instances of the params struct to act as the save/load slots. 10 is a bit of an arbitrary number, but it's nice to be sure the slot index will always be a single digit number. If you want to change the amount of slots, keep in mind that it is also hardcoded into the comboBox initialisations so you'll have to change that too.
+            for (int x = 0; x < 10; x++)
+            {
+                saveSlots.Add(new GOCPlayerKinematicParams());
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -133,8 +140,8 @@ namespace Chaos_Spear
             coordAdd += 0x1A8;
             gameMem.Read<nint>((nuint)coordAdd, out coordAdd);
             gameMem.Read((nuint)coordAdd, out savedParams);
-            
-
+            // gameMem doesn't like having list items as the out, so the data is saved to the list here instead
+            saveSlots[slotToSave] = savedParams;
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -145,6 +152,8 @@ namespace Chaos_Spear
                 return;
             }
 
+            // No reason for this assignment just means i dont have to rewrite the Mem.Writes LMAO
+            savedParams = saveSlots[slotToLoad];
             gameMem.Write<float>((nuint)coordAdd + 0x80, savedParams.xPos);
             gameMem.Write<float>((nuint)coordAdd + 0x84, savedParams.yPos);
             gameMem.Write<float>((nuint)coordAdd + 0x88, savedParams.zPos);
@@ -185,11 +194,12 @@ namespace Chaos_Spear
 
                 speedHorizontal = (float)Math.Round(Math.Sqrt(Math.Pow(kParams.xSpd, 2) + Math.Pow(kParams.zSpd, 2)), 1);
 
-                label1.Text = "Saved X Pos: " + savedParams.xPos;
+                // Showing values for two slots can cause clipping due to excessive text length, so the values are rounded slightly
+                label1.Text = "Saved X Pos: " + Math.Round(saveSlots[slotToSave].xPos, 3) + " : " + Math.Round(saveSlots[slotToLoad].xPos, 3);
 
-                label2.Text = "Saved Y Pos: " + savedParams.yPos;
+                label2.Text = "Saved Y Pos: " + Math.Round(saveSlots[slotToSave].yPos, 3) + " : " + Math.Round(saveSlots[slotToLoad].yPos, 3);
 
-                label3.Text = "Saved Z Pos: " + savedParams.zPos;
+                label3.Text = "Saved Z Pos: " + Math.Round(saveSlots[slotToSave].zPos, 3) + " : " + Math.Round(saveSlots[slotToLoad].zPos, 3);
 
                 label4.Text = "Current X Pos: " + Math.Round(kParams.xPos, 1);
                 label5.Text = "Current Y Pos: " + Math.Round(kParams.yPos, 1);
@@ -213,6 +223,11 @@ namespace Chaos_Spear
         }
         private void button4_Click(object sender, EventArgs e)
         {
+            if (!attached)
+            {
+                MessageBox.Show("Attach program to SXSG first");
+                return;
+            }
             ringsAddress = IntPtr.Add(proc.MainModule.BaseAddress, ringOff);
             gameMem.Read<nint>((nuint)ringsAddress, out ringAdd);
             gameMem.Read<nint>((nuint)ringAdd + 0x1B0, out ringAdd);
@@ -223,6 +238,16 @@ namespace Chaos_Spear
             gameMem.Read<nint>((nuint)ringAdd + 0x30, out ringAdd);
             gameMem.Write<int>((nuint)ringAdd + 0x28, 999);
 
+        }
+        private void comboBox1_changed(object sender, EventArgs e)
+        {
+            slotToSave = comboBox1.SelectedIndex;
+            label10.Text = "Showing positions stored in slots " + slotToSave + " : " + slotToLoad;
+        }
+        private void comboBox2_changed(object sender, EventArgs e)
+        {
+            slotToLoad = comboBox2.SelectedIndex;
+            label10.Text = "Showing positions stored in slots " + slotToSave + " : " + slotToLoad;
         }
     }
 }
